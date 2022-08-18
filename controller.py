@@ -1,6 +1,7 @@
 from abc import ABC, ABCMeta, abstractmethod
 from db import DB_connection
 from classes import User, Booking, Object
+from datetime import datetime, date, time
 import sqlite3
 
 
@@ -52,6 +53,17 @@ class ObjectController(AbstractController):
         connect.commit()
         connect.close()
 
+    def getAllOfType(self, type, campus):
+        connect = DB_connection.create_connection(self.db_name)
+        cursor = connect.cursor()
+        cursor.execute(f"SELECT * FROM Objects WHERE type = {type} AND campus = {campus}")
+        all_book = cursor.fetchall()
+        connect.close()
+        bookings = []
+        for book in all_book:
+            bookings.append(Booking(*book))
+        return bookings
+
 
 class UserController(AbstractController):
     'Контроллер пользователей'
@@ -102,10 +114,17 @@ class BookingController(AbstractController):
         connect.close()
         return booking
 
-    def delete(self, Booking):
+    def delete(self, booking):
         connect = DB_connection.create_connection(self.db_name)
         cursor = connect.cursor()
-        cursor.execute(f"UPDATE Bookings SET status = 'not active' WHERE id = {Booking.id} AND status = 'active'")
+        cursor.execute(f"UPDATE Bookings SET status = 'not active' WHERE id = {booking.id} AND status = 'active'")
+        connect.commit()
+        connect.close()
+
+    def true_delete(self, booking):
+        connect = DB_connection.create_connection(self.db_name)
+        cursor = connect.cursor()
+        cursor.execute(f"DELETE FROM Bookings WHERE id = {booking.id}")
         connect.commit()
         connect.close()
 
@@ -133,14 +152,49 @@ class BookingController(AbstractController):
             bookings.append(Booking(*book))
         return bookings
 
-    #   работает неправильно
-    # def getAllAvailable(self, type, campus):
-    #     connect = DB_connection.create_connection(self.db_name)
-    #     cursor = connect.cursor()
-    #     cursor.execute(f"SELECT * FROM Bookings WHERE type = {type} AND campus = {campus}")
-    #     all_book = cursor.fetchall()
-    #     connect.close()
-    #     bookings = []
-    #     for book in all_book:
-    #         bookings.append(Booking(*book))
-    #     return bookings
+    def getAvailableTimeForObj(self, object_id, date):
+        connect = DB_connection.create_connection(self.db_name)
+        cursor = connect.cursor()
+        cursor.execute(f"SELECT start_time, end_time FROM Objects WHERE "
+                       f"object_id = {object_id} AND "
+                       f"(DATE(start_time) = {date} OR DATE(end_time) = {date} "
+                       f"ORDERED BY 1")
+        all_book = cursor.fetchall()
+        connect.close()
+        d_date = datetime.fromisoformat(date)
+        bookings = []
+        for book in all_book:
+            bookings.append(Booking(*book))
+        all_bookings = []
+        for h in range(24):
+            d = date(d_date.strftime('%Y, %m, %d'))
+            t = time(h, 0)
+            dt = datetime.combine(d,t)
+            all_bookings.append((0, 0, dt.strftime('%Y-%m-%d %H:%M'), dt.strftime('%Y-%m-%d %H:59'), 'not active'))
+        if bookings == []:
+            obj_bookings = []
+            for booking in all_bookings:
+                obj_bookings.append(Booking(*booking))
+            return obj_bookings
+        # else:
+        #     h = 0
+        d_start, d_end = datetime.fromisoformat(bookings[0][0]), datetime.fromisoformat(bookings[0][1])
+        if (d_start.strftime('%d') != d_date.strftime('%d')):
+            for h in range(int(d_date.strftime('%H'))):
+                all_bookings.pop(0)
+            min = 0
+        else
+            min = int(d_start.strftime('%H'))
+        d_start, d_end = datetime.fromisoformat(bookings[-1][0]), datetime.fromisoformat(bookings[-1][1])
+        if (d_start.strftime('%d') != d_date.strftime('%d')):
+            max = 24
+        else
+            max = int(d_end.strftime('%H'))
+        h = min;
+        for book in all_book:
+            d_start, d_end = datetime.fromisoformat(book[0]), datetime.fromisoformat(book[1])
+            if (d_start.strftime('%d') != d_date.strftime('%d')):
+                min = int(d_end.strftime('%H'))
+
+            bookings.append(Booking(*book))
+        return bookings
