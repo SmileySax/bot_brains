@@ -175,6 +175,7 @@ class BookingController(AbstractController):
         connect.close()
         d_date = datetime.fromisoformat(date)
         bookings = []
+        obj_bookings = []
         for book in all_book:
             bookings.append(Booking(*book))
         all_bookings = []
@@ -184,29 +185,28 @@ class BookingController(AbstractController):
             dt = datetime.combine(d,t)
             all_bookings.append((0, 0, dt.strftime('%Y-%m-%d %H:%M'), dt.strftime('%Y-%m-%d %H:59'), 'not active'))
         if bookings == []:
-            obj_bookings = []
             for booking in all_bookings:
                 obj_bookings.append(Booking(*booking))
             return obj_bookings
-        # else:
-        #     h = 0
+
         d_start, d_end = datetime.fromisoformat(bookings[0][0]), datetime.fromisoformat(bookings[0][1])
-        if (d_start.strftime('%d') != d_date.strftime('%d')):
-            for h in range(int(d_date.strftime('%H'))):
+        if (d_start.strftime('%d') - d_date.strftime('%d') == -1 or d_start.strftime('%d') - d_date.strftime('%d') > 27):
+            for h in range(int(d_end.strftime('%H')) + 1):
                 all_bookings.pop(0)
-            min = 0
-        else
+            min = int(d_end.strftime('%H')) + 1
+        else:
             min = int(d_start.strftime('%H'))
         d_start, d_end = datetime.fromisoformat(bookings[-1][0]), datetime.fromisoformat(bookings[-1][1])
-        if (d_start.strftime('%d') != d_date.strftime('%d')):
-            max = 24
-        else
-            max = int(d_end.strftime('%H'))
-        h = min;
+        if (d_end.strftime('%d') - d_date.strftime('%d') == 1 or d_end.strftime('%d') - d_date.strftime('%d') < -27):
+            for h in range(int(d_start.strftime('%H')), 24):
+                all_bookings.pop(-1)
+
         for book in all_book:
             d_start, d_end = datetime.fromisoformat(book[0]), datetime.fromisoformat(book[1])
-            if (d_start.strftime('%d') != d_date.strftime('%d')):
-                min = int(d_end.strftime('%H'))
-
-            bookings.append(Booking(*book))
-        return bookings
+            if (d_start.strftime('%d') == d_date.strftime('%d') and d_end.strftime('%d') == d_date.strftime('%d')):
+                for h in range(d_start.strftime('%H'), d_end.strftime('%H') + 1):
+                    all_bookings.pop(h - min)
+                    min += 1
+        for booking in all_bookings:
+            obj_bookings.append(Booking(*booking))
+        return obj_bookings
