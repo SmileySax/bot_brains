@@ -152,6 +152,18 @@ class BookingController(AbstractController):
             bookings.append(Booking(*book))
         return bookings
 
+    def getAllForTgUser(self, tg_id):
+        connect = DB_connection.create_connection(self.db_name)
+        cursor = connect.cursor()
+        cursor.execute(f"SELECT * FROM Bookings WHERE tg_id = {tg_id} AND status = 'active'")
+        all_book = cursor.fetchall()
+        print(all_book)
+        connect.close()
+        bookings = []
+        for book in all_book:
+            bookings.append(Booking(*book))
+        return bookings
+
     def getAvailableTimeForObj(self, object_id, date):
         connect = DB_connection.create_connection(self.db_name)
         cursor = connect.cursor()
